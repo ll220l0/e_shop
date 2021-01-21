@@ -1,15 +1,17 @@
-from rest_framework.generics import ListAPIView
+from django_filters.rest_framework import DjangoFilterBackend
+
+from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework import permissions as p, viewsets, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
-from django_filters.rest_framework import DjangoFilterBackend
 
-from django.db.models import Q
 from rest_framework.response import Response
 
-from .models import Product, Category
+from django.db.models import Q
+
 from .serializers import *
-from .filters import ProductFilter
+from .filters import *
+from .models import *
 
 class MyPagination(PageNumberPagination):
     page_size = 5
@@ -27,8 +29,10 @@ class ProductViewSet(viewsets.ModelViewSet):
     filter_class = ProductFilter
 
     def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action == 'retrieve':
             return ProductSerializer
+        elif self.action == 'list':
+            return ProductListSerializer
         return CreateUpdateProductSerializer
 
     def get_permissions(self):
@@ -47,3 +51,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = ProductSerializer(queryset, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CreateComment(CreateAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = (p.IsAuthenticated,)
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
